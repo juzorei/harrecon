@@ -1,0 +1,21 @@
+{
+  "name": "harrecon",
+  "owner": {
+    "name": "juzorei"
+  },
+  "metadata": {
+    "description": "HAR captures in, a private API's inventory, schemas and a typed client out",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "harrecon",
+      "description": "Reverse-engineer a website's undocumented JSON API from a HAR capture: inventory, auth mechanisms, inferred schemas, typed client skeletons",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/har-to-api-client"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harrecon"
+version = "0.1.0"
+description = "Turn HAR captures into a private API's inventory, schemas and a typed Python client — offline, stdlib only"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "juzorei" }]
+keywords = ["har", "api", "reverse-engineering", "scraping", "client-generation", "agent-skills"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP",
+]
+
+[project.urls]
+Homepage = "https://github.com/juzorei/harrecon"
+
+[project.scripts]
+harrecon = "harrecon.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
