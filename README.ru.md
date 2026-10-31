@@ -8,10 +8,10 @@
 
 ```text
 $ harrecon inventory capture.har
-captured 6 entries, 2 JSON endpoints
+captured 5 entries, 2 JSON endpoints
 
 auth mechanisms:
-  authorization: Bearer: Bearer e…(32 chars)
+  authorization: Bearer: [redacted] (32 chars)
 
   GET /v1/lots/{id}  [api.example.com] 200/200
 
@@ -22,8 +22,15 @@ object
   price: number
 
 $ harrecon diff worked.har broken.har
-  ~ GET /v1/lots/{id}  schema changed:  + currency: string
+  ~ GET /v1/lots/{id} [api.example.com] schema changed:
+     $.currency: added (string)
 ```
+
+## Новое в 0.2.0
+
+`diff` показывает точные пути добавленных и удалённых полей, изменения типов и обязательности, включая вложенные объекты и элементы массивов. Флаг `--fail-on-change` возвращает код 1 при различиях; без него команда только печатает отчёт. JSON содержит хосты, структурированные изменения полей и полные схемы до/после.
+
+Значения авторизации в inventory теперь скрываются полностью, включая короткие токены. Признак optional сохраняется при объединении последующих образцов. Сравнение показывает различия захватов, а не доказывает несовместимое изменение API. Подробнее — в [справочнике CLI](tools/harrecon/README.md#field-level-diffs-020).
 
 ## Что в репозитории
 

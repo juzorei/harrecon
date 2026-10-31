@@ -42,7 +42,7 @@ def test_auth_markers_redacted(hars):
     markers = auth_markers(e1)
     assert "authorization: Bearer" in markers
     sample = markers["authorization: Bearer"][0]
-    assert sample.startswith("Bearer e…") and "12131415161718" not in sample
+    assert sample == "[redacted] (32 chars)" and "12131415161718" not in sample
 
 
 def test_schema_merge_marks_optional_field(hars):

@@ -108,7 +108,7 @@ def auth_markers(entries: list[Entry]) -> dict[str, list[str]]:
     """Which auth mechanisms the captured API actually uses, with redacted samples."""
     found: dict[str, list[str]] = {}
     def add(kind, value):
-        red = value[:8] + "…" + f"({len(value)} chars)" if len(value) > 16 else value
+        red = f"[redacted] ({len(value)} chars)"
         found.setdefault(kind, [])
         if red not in found[kind]:
             found[kind].append(red)
@@ -117,7 +117,11 @@ def auth_markers(entries: list[Entry]) -> dict[str, list[str]]:
             continue
         for h, v in e.request_headers.items():
             if h == "authorization":
-                scheme = v.split(" ", 1)[0] if " " in v else v
+                candidate, separator, _ = v.partition(" ")
+                known = {"bearer": "Bearer", "basic": "Basic", "digest": "Digest",
+                         "negotiate": "Negotiate", "token": "Token", "oauth": "OAuth",
+                         "aws4-hmac-sha256": "AWS4-HMAC-SHA256"}
+                scheme = known.get(candidate.lower(), "other") if separator else "other"
                 add(f"authorization: {scheme}", v)
             elif h in ("x-api-key", "x-auth-token", "x-csrf-token", "x-xsrf-token"):
                 add(f"header: {h}", v)
@@ -148,6 +152,13 @@ def _infer(value, samples: int = 1) -> dict:
 
 def merge_schema(a: dict, b: dict) -> dict:
     """Merge two samples of the same shape; fields missing on either side become optional."""
+    merged = _merge_schema(a, b)
+    if a.get("optional") or b.get("optional"):
+        merged = {**merged, "optional": True}
+    return merged
+
+
+def _merge_schema(a: dict, b: dict) -> dict:
     if a.get("type") != b.get("type"):
         return {"type": f"{a.get('type')}|{b.get('type')}"}
     if "fields" in a and "fields" in b:

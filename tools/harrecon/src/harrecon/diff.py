@@ -3,8 +3,43 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+import re
 
 from .har import ApiCall, api_calls, schema_for
+
+
+def schema_changes(before: dict, after: dict, path: str = "$") -> list[dict]:
+    """Describe observed shape differences with unambiguous JSON-style paths.
+
+    These are capture differences, not a claim of backward incompatibility.
+    A renamed key is deliberately reported as a removal and an addition.
+    """
+    changes = []
+
+    def add(kind, old, new):
+        changes.append({"path": path, "kind": kind, "before": old, "after": new})
+
+    if bool(before.get("optional")) != bool(after.get("optional")):
+        add("optional_changed", bool(before.get("optional")), bool(after.get("optional")))
+    if before.get("type") != after.get("type"):
+        add("type_changed", before.get("type"), after.get("type"))
+        return changes
+    if before.get("type") == "object":
+        old_fields, new_fields = before.get("fields", {}), after.get("fields", {})
+        for key in sorted(old_fields.keys() | new_fields.keys()):
+            child = path + (f".{key}" if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", key)
+                            else f"[{json.dumps(key, ensure_ascii=False)}]")
+            if key not in old_fields or key not in new_fields:
+                changes.append({"path": child,
+                                "kind": "field_added" if key in new_fields else "field_removed",
+                                "before": old_fields.get(key), "after": new_fields.get(key)})
+            else:
+                changes.extend(schema_changes(old_fields[key], new_fields[key], child))
+    elif before.get("type") == "array":
+        changes.extend(schema_changes(before.get("items") or {"type": "unknown"},
+                                      after.get("items") or {"type": "unknown"}, path + "[]"))
+    return changes
 
 
 @dataclass

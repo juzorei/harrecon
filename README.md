@@ -12,10 +12,10 @@ A site without documented API still has an API: its frontend calls it, and a HAR
 
 ```text
 $ harrecon inventory capture.har
-captured 6 entries, 2 JSON endpoints
+captured 5 entries, 2 JSON endpoints
 
 auth mechanisms:
-  authorization: Bearer: Bearer e…(32 chars)
+  authorization: Bearer: [redacted] (32 chars)
 
   GET /v1/lots/{id}  [api.example.com] 200/200
 
@@ -26,8 +26,15 @@ object
   price: number
 
 $ harrecon diff worked.har broken.har
-  ~ GET /v1/lots/{id}  schema changed:  + currency: string
+  ~ GET /v1/lots/{id} [api.example.com] schema changed:
+     $.currency: added (string)
 ```
+
+## New in 0.2.0
+
+`diff` now pinpoints added/removed fields, changed types and optionality, including nested objects and array items. Add `--fail-on-change` to return exit 1 when captures differ; the default remains report-only. JSON output includes host-qualified endpoints and machine-readable field changes while keeping full before/after schemas.
+
+Inventory auth samples are fully masked, including short credentials. Optional fields remain optional across later samples. See the [CLI reference](tools/harrecon/README.md#field-level-diffs-020) for output and exit-code details. Differences describe observed captures, not necessarily breaking API changes.
 
 ## What's in the repo
 

@@ -8,7 +8,7 @@ import sys
 
 from . import __version__
 from .client import generate
-from .diff import diff
+from .diff import diff, schema_changes
 from .har import api_calls, auth_markers, load, schema_for, schema_json
 
 
@@ -81,20 +81,32 @@ def cmd_diff(args) -> int:
         print(json.dumps({
             "added": [c.endpoint for c in d.added],
             "removed": [c.endpoint for c in d.removed],
-            "changed": [{"endpoint": c.endpoint, "before": sa, "after": sb} for c, sa, sb in d.changed],
+            "added_details": [{"endpoint": c.endpoint, "host": c.host} for c in d.added],
+            "removed_details": [{"endpoint": c.endpoint, "host": c.host} for c in d.removed],
+            "changed": [{"endpoint": c.endpoint, "host": c.host, "before": sa, "after": sb,
+                         "changes": schema_changes(sa, sb)} for c, sa, sb in d.changed],
         }, indent=2))
-        return 0
+        return 1 if args.fail_on_change and not d.quiet else 0
     for c in d.added:
         print(f"  + {c.endpoint} [{c.host}]")
     for c in d.removed:
         print(f"  - {c.endpoint} [{c.host}]")
     for c, sa, sb in d.changed:
         print(f"  ~ {c.endpoint} [{c.host}] schema changed:")
-        print(f"     before: {json.dumps(sa)[:160]}")
-        print(f"     after:  {json.dumps(sb)[:160]}")
+        for change in schema_changes(sa, sb):
+            kind, path = change["kind"], change["path"]
+            if kind == "field_added":
+                detail = f"added ({change['after']['type']})"
+            elif kind == "field_removed":
+                detail = f"removed ({change['before']['type']})"
+            elif kind == "optional_changed":
+                detail = "required -> optional" if change["after"] else "optional -> required"
+            else:
+                detail = f"{change['before']} -> {change['after']}"
+            print(f"     {path}: {detail}")
     if d.quiet:
         print("no API changes between the captures")
-    return 0
+    return 1 if args.fail_on_change and not d.quiet else 0
 
 
 def cmd_gen(args) -> int:
@@ -133,6 +145,8 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("diff", help="what changed between two captures of the same API")
     p.add_argument("har_a")
     p.add_argument("har_b")
+    p.add_argument("--fail-on-change", action="store_true",
+                   help="exit 1 if endpoints or observed schemas differ (default: report only)")
     p.add_argument("--host")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_diff)

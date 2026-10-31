@@ -51,7 +51,20 @@ Capture the same flow twice — once when it worked, once after it broke — and
 harrecon diff worked.har broken.har
 ```
 
-Endpoints added/removed and schemas changed are reported precisely. This turns "the site changed something" into a list of concrete differences, and it's the fastest way to answer "did they change the API or is my code wrong".
+With harrecon 0.2.0+, schema changes include exact paths, including nested objects and array items:
+
+```text
+  ~ GET /v1/lots/{id} [api.example.com] schema changed:
+     $.currency: added (string)
+     $.items[].price: number -> string
+     $.seller: required -> optional
+```
+
+Use `--host api.example.com` to compare one backend. `--json` preserves full before/after schemas and adds a `changes` list per changed endpoint, with `path`, `kind`, `before`, and `after`. Host-qualified `added_details` and `removed_details` distinguish identical paths on different backends; the original `added`/`removed` string arrays remain available.
+
+For an automated capture check, use `harrecon diff before.har after.har --fail-on-change`: exit **0** means no observed differences, **1** means endpoints or schemas differ, **2** means an input/usage error. Without that flag, differences are reported with exit 0. Do not retry exit 1 as if it were a network failure: this is an offline comparison.
+
+Compare the same flow and similar sample coverage. An optional field may reflect different captured examples rather than a changed API contract; a missing endpoint may simply not have been exercised. A renamed key is reported as a removal and addition, not guessed. Treat the report as evidence to investigate, not proof that the server introduced a breaking change. Unchanged inferred schemas do not prove that status codes, authentication, response values or runtime behavior are unchanged.
 
 ## 6. Play by the rules — say them out loud
 
@@ -60,7 +73,7 @@ Working against a private API is interoperability research only when it respects
 - **Your account, your data.** Authenticate as the user; never bypass auth, never touch other people's data.
 - **Rate limits are a feature.** Throttle the client below the site's own frontend pace; add backoff on 429.
 - **Read the ToS** for the specific service before the client ships; some prohibit any third-party access regardless of politeness.
-- **Private ≠ secret.** Captured tokens stay on the user's machine — redact them in anything shared (the CLI's inventory already redacts).
+- **Private ≠ secret.** Captured tokens stay on the user's machine. Version 0.2.0 masks inventory auth samples completely, including short tokens and unknown authorization schemes. That does not sanitize the HAR file, URLs, response bodies or generated client code; inspect those separately before sharing.
 
 When the user's goal crosses a line — bypassing auth, other people's accounts, ToS-prohibited scraping — say so plainly and offer the legitimate variant (their own account, the service's official API, or a data export).
 
